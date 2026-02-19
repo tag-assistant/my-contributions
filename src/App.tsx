@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { fetchUserProfile, fetchContributions, computeHeroStats, computeBadges } from './github';
+import type { DateRange } from './github';
 import { getToken, setToken, exchangeCode } from './auth';
 import type { Contribution, UserProfile, HeroStats, Badge } from './types';
 import { HeroSection } from './components/HeroSection';
 import { BadgeList } from './components/BadgeList';
 import { LanguageFilter } from './components/LanguageFilter';
+import { DateRangeFilter } from './components/DateRangeFilter';
 import { ContributionCard } from './components/ContributionCard';
 import { Timeline } from './components/Timeline';
 import { Header } from './components/Header';
@@ -24,6 +26,7 @@ function ProfilePage() {
   const [loadingPct, setLoadingPct] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [selectedLang, setSelectedLang] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<DateRange>('all');
   const [view, setView] = useState<'cards' | 'timeline'>('cards');
   const token = getToken();
 
@@ -37,7 +40,7 @@ function ProfilePage() {
         fetchContributions(token, username, (msg, pct) => {
           setLoadingMsg(msg);
           setLoadingPct(pct);
-        }),
+        }, dateRange),
       ]);
       setProfile(prof);
       setContributions(contribs);
@@ -49,7 +52,7 @@ function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [username, token]);
+  }, [username, token, dateRange]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -71,13 +74,16 @@ function ProfilePage() {
           selected={selectedLang}
           onSelect={setSelectedLang}
         />
-        <div className="view-toggle">
-          <button className={view === 'cards' ? 'active' : ''} onClick={() => setView('cards')}>
-            <span>▦</span> Cards
-          </button>
-          <button className={view === 'timeline' ? 'active' : ''} onClick={() => setView('timeline')}>
-            <span>⏱</span> Timeline
-          </button>
+        <div className="controls-right">
+          <DateRangeFilter selected={dateRange} onSelect={setDateRange} />
+          <div className="view-toggle">
+            <button className={view === 'cards' ? 'active' : ''} onClick={() => setView('cards')}>
+              <span>▦</span> Cards
+            </button>
+            <button className={view === 'timeline' ? 'active' : ''} onClick={() => setView('timeline')}>
+              <span>⏱</span> Timeline
+            </button>
+          </div>
         </div>
       </div>
       {view === 'cards' ? (

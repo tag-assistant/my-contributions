@@ -1,6 +1,8 @@
 import { Octokit } from '@octokit/rest';
 import type { Contribution, UserProfile, HeroStats, Badge } from './types';
 
+export type DateRange = 'all' | '1y' | '3y' | '5y';
+
 export async function fetchUserProfile(token: string | null, username?: string): Promise<UserProfile> {
   const octokit = new Octokit({ auth: token || undefined });
   const { data } = username
@@ -18,46 +20,127 @@ export async function fetchUserProfile(token: string | null, username?: string):
   };
 }
 
+function getDateRangeFilter(range: DateRange): string {
+  if (range === 'all') return '';
+  const now = new Date();
+  const years = range === '1y' ? 1 : range === '3y' ? 3 : 5;
+  const from = new Date(now.getFullYear() - years, now.getMonth(), now.getDate());
+  return ` merged:>=${from.toISOString().split('T')[0]}`;
+}
+
+function getYearlyChunks(): { from: string; to: string }[] {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const chunks: { from: string; to: string }[] = [];
+  // Go back 15 years max
+  for (let y = currentYear; y >= currentYear - 15; y--) {
+    chunks.push({
+      from: `${y}-01-01`,
+      to: y === currentYear ? now.toISOString().split('T')[0] : `${y}-12-31`,
+    });
+  }
+  return chunks;
+}
+
 export async function fetchContributions(
   token: string | null,
   username: string,
-  onProgress?: (msg: string, pct: number) => void
+  onProgress?: (msg: string, pct: number) => void,
+  dateRange: DateRange = 'all'
 ): Promise<Contribution[]> {
   const octokit = new Octokit({ auth: token || undefined });
   const contributionMap = new Map<string, Contribution>();
 
   onProgress?.('Searching for merged pull requests...', 5);
 
-  // Fetch merged PRs in public repos the user doesn't own
-  let page = 1;
-  let totalPRs = 0;
   const allPRItems: any[] = [];
 
-  while (true) {
-    const { data } = await octokit.search.issuesAndPullRequests({
-      q: `type:pr author:${username} is:merged is:public -user:${username}`,
-      sort: 'created',
-      order: 'desc',
-      per_page: 100,
-      page,
-    });
+  if (dateRange === 'all') {
+    // Use yearly chunks to bypass 1k search limit
+    const chunks = getYearlyChunks();
+    let emptyYearsInRow = 0;
 
-    if (page === 1) totalPRs = data.total_count;
-    allPRItems.push(...data.items);
-    onProgress?.(`Found ${allPRItems.length} of ${totalPRs} PRs...`, Math.min(10 + (allPRItems.length / Math.max(totalPRs, 1)) * 60, 70));
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const dateFilter = ` merged:${chunk.from}..${chunk.to}`;
+      const q = `type:pr author:${username} is:merged is:public -user:${username}${dateFilter}`;
 
-    if (data.items.length < 100 || allPRItems.length >= totalPRs) break;
-    page++;
+      let page = 1;
+      let chunkItems: any[] = [];
 
-    // Rate limit safety
-    await sleep(200);
+      while (true) {
+        const { data } = await octokit.search.issuesAndPullRequests({
+          q,
+          sort: 'created',
+          order: 'desc',
+          per_page: 100,
+          page,
+        });
+
+        chunkItems.push(...data.items);
+        onProgress?.(
+          `Scanning ${chunk.from.slice(0, 4)}... found ${allPRItems.length + chunkItems.length} PRs total`,
+          5 + (i / chunks.length) * 65
+        );
+
+        if (data.items.length < 100 || chunkItems.length >= data.total_count) break;
+        if (page >= 10) break; // 1k per chunk max
+        page++;
+        await sleep(200);
+      }
+
+      allPRItems.push(...chunkItems);
+
+      if (chunkItems.length === 0) {
+        emptyYearsInRow++;
+        if (emptyYearsInRow >= 3) break; // Stop if 3 consecutive empty years
+      } else {
+        emptyYearsInRow = 0;
+      }
+
+      await sleep(100);
+    }
+  } else {
+    // Single query with date filter
+    const dateFilter = getDateRangeFilter(dateRange);
+    const q = `type:pr author:${username} is:merged is:public -user:${username}${dateFilter}`;
+    let page = 1;
+
+    while (true) {
+      const { data } = await octokit.search.issuesAndPullRequests({
+        q,
+        sort: 'created',
+        order: 'desc',
+        per_page: 100,
+        page,
+      });
+
+      allPRItems.push(...data.items);
+      onProgress?.(
+        `Found ${allPRItems.length} of ${data.total_count} PRs...`,
+        Math.min(10 + (allPRItems.length / Math.max(data.total_count, 1)) * 60, 70)
+      );
+
+      if (data.items.length < 100 || allPRItems.length >= data.total_count) break;
+      if (page >= 10) break;
+      page++;
+      await sleep(200);
+    }
   }
 
   onProgress?.(`Processing ${allPRItems.length} contributions...`, 75);
 
+  // Deduplicate (yearly chunks may have overlap at boundaries)
+  const seen = new Set<number>();
+  const dedupedItems = allPRItems.filter(item => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+
   // Group by repo and fetch repo details
   const repoGroups = new Map<string, any[]>();
-  for (const item of allPRItems) {
+  for (const item of dedupedItems) {
     const repoUrl = item.repository_url;
     const repoFullName = repoUrl.replace('https://api.github.com/repos/', '');
     if (!repoGroups.has(repoFullName)) repoGroups.set(repoFullName, []);

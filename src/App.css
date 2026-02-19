@@ -13,6 +13,13 @@
   flex-wrap: wrap;
 }
 
+.controls-right {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
 .view-toggle {
   display: flex;
   gap: 4px;
