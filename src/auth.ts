@@ -1,5 +1,5 @@
-const CLIENT_ID = 'Ov23liYOURCLIENTID'; // Will be replaced with real OAuth App client ID
-const WORKER_URL = 'https://my-contributions-auth.tag-worker.workers.dev';
+const CLIENT_ID = 'Ov23ctyJPmK7DOEmg85J';
+const AUTH_PROXY_URL = 'https://my-contributions.vercel.app/api/auth';
 
 export function getLoginUrl(returnPath?: string): string {
   const redirectUri = `${window.location.origin}${import.meta.env.BASE_URL || '/'}callback`;
@@ -8,13 +8,14 @@ export function getLoginUrl(returnPath?: string): string {
 }
 
 export async function exchangeCode(code: string): Promise<string> {
-  const res = await fetch(`${WORKER_URL}/api/auth/callback`, {
+  const res = await fetch(AUTH_PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code }),
   });
   if (!res.ok) throw new Error('Failed to exchange code');
   const data = await res.json();
+  if (data.error) throw new Error(data.error);
   return data.access_token;
 }
 
