@@ -1,0 +1,37 @@
+.badge-list {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid;
+  border-radius: var(--radius);
+  transition: transform 0.15s;
+}
+
+.badge:hover {
+  transform: translateY(-1px);
+}
+
+.badge-icon {
+  font-size: 20px;
+}
+
+.badge-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.badge-desc {
+  display: block;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}

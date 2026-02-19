@@ -1,0 +1,137 @@
+.contribution-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.contribution-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+}
+
+.card-repo-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-owner {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.card-name {
+  font-weight: 700;
+  font-size: 15px;
+  margin-left: 2px;
+}
+
+.card-stars {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.card-description {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-prs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.card-pr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.pr-icon {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.pr-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pr-number {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.card-pr.more {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  padding-left: 18px;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.card-languages {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.card-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.card-lang .lang-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.card-time {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
