@@ -92,8 +92,10 @@
 .landing-divider {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
-  margin: 24px 0;
+  margin: 24px auto;
+  max-width: 300px;
   color: var(--text-tertiary);
   font-size: 13px;
 }
@@ -104,7 +106,6 @@
   flex: 1;
   height: 1px;
   background: var(--border);
-  max-width: 80px;
 }
 
 .github-login-btn {
