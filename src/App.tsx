@@ -4,6 +4,7 @@ import { fetchUserProfile, fetchContributions, computeHeroStats, computeBadges }
 import type { DateRange } from './github';
 import { getToken, setToken, exchangeCode } from './auth';
 import type { Contribution, UserProfile, HeroStats, Badge } from './types';
+import { getCached } from './cache';
 import { HeroSection } from './components/HeroSection';
 import { BadgeList } from './components/BadgeList';
 import { LanguageFilter } from './components/LanguageFilter';

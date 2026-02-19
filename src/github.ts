@@ -52,11 +52,25 @@ export async function fetchContributions(
   const octokit = new Octokit({ auth: token || undefined });
   const contributionMap = new Map<string, Contribution>();
 
-  // Check cache first
+  // Check localStorage cache first
   const cached = getCached<Contribution[]>('contributions', username, dateRange);
   if (cached) {
     onProgress?.('Loaded from cache!', 100);
     return cached;
+  }
+
+  // Check precached static data (for example profiles)
+  if (dateRange === 'all') {
+    try {
+      const precacheUrl = `${import.meta.env.BASE_URL || '/'}precache/${username}.json`;
+      const res = await fetch(precacheUrl);
+      if (res.ok) {
+        const precached = await res.json();
+        onProgress?.('Loaded!', 100);
+        setCached(precached.contributions, 'contributions', username, dateRange);
+        return precached.contributions;
+      }
+    } catch { /* not precached, continue */ }
   }
 
   onProgress?.('Searching for merged pull requests...', 5);
