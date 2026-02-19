@@ -2,20 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/my-contributions/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Contributions — OSS Portfolio</title>
     <script>
-      // SPA redirect for GitHub Pages
-      var pathSegmentsToKeep = 1;
-      var l = window.location;
-      l.replace(
-        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
-        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
-        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
-        l.hash
-      );
+      // GitHub Pages SPA redirect — preserves path + query + hash
+      var seg = 1; // segments to keep (1 = /my-contributions)
+      var loc = window.location;
+      var path = loc.pathname.split('/').slice(seg + 1).join('/');
+      var url = loc.pathname.split('/').slice(0, seg + 1).join('/') + '/?' +
+        'p=/' + path +
+        (loc.search ? '&q=' + encodeURIComponent(loc.search.slice(1)) : '') +
+        (loc.hash || '');
+      loc.replace(url);
     </script>
   </head>
   <body></body>

@@ -1,7 +1,8 @@
+export const config = { runtime: 'edge' };
+
 export default async function handler(req) {
-  // CORS headers
   const headers = {
-    'Access-Control-Allow-Origin': 'https://tag-assistant.github.io',
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
@@ -14,29 +15,44 @@ export default async function handler(req) {
     return new Response('Method not allowed', { status: 405, headers });
   }
 
-  const { code } = await req.json();
-  if (!code) {
-    return Response.json({ error: 'Missing code' }, { status: 400, headers });
+  try {
+    const { code } = await req.json();
+    if (!code) {
+      return new Response(JSON.stringify({ error: 'Missing code' }), {
+        status: 400,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const res = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      return new Response(JSON.stringify({ error: data.error_description || data.error }), {
+        status: 400,
+        headers: { ...headers, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ access_token: data.access_token }), {
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { ...headers, 'Content-Type': 'application/json' },
+    });
   }
-
-  const res = await fetch('https://github.com/login/oauth/access_token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({
-      client_id: process.env.GITHUB_CLIENT_ID,
-      client_secret: process.env.GITHUB_CLIENT_SECRET,
-      code,
-    }),
-  });
-
-  const data = await res.json();
-
-  if (data.error) {
-    return Response.json({ error: data.error_description || data.error }, { status: 400, headers });
-  }
-
-  return Response.json({ access_token: data.access_token }, { headers });
 }
