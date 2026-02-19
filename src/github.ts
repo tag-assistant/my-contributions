@@ -1,5 +1,6 @@
 import { Octokit } from '@octokit/rest';
 import type { Contribution, UserProfile, HeroStats, Badge } from './types';
+import { getCached, setCached, getRepoCached, setRepoCached } from './cache';
 
 export type DateRange = 'all' | '1y' | '3y' | '5y';
 
@@ -50,6 +51,13 @@ export async function fetchContributions(
 ): Promise<Contribution[]> {
   const octokit = new Octokit({ auth: token || undefined });
   const contributionMap = new Map<string, Contribution>();
+
+  // Check cache first
+  const cached = getCached<Contribution[]>('contributions', username, dateRange);
+  if (cached) {
+    onProgress?.('Loaded from cache!', 100);
+    return cached;
+  }
 
   onProgress?.('Searching for merged pull requests...', 5);
 
@@ -155,14 +163,26 @@ export async function fetchContributions(
     const prs = repoGroups.get(fullName)!;
 
     try {
-      const { data: repoData } = await octokit.repos.get({ owner, repo });
+      // Check repo cache first
+      const cachedRepo = getRepoCached(fullName);
+      let repoData: any;
+      let languages: string[];
 
-      // Get languages for the repo
-      let languages: string[] = [];
-      try {
-        const { data: langData } = await octokit.repos.listLanguages({ owner, repo });
-        languages = Object.keys(langData);
-      } catch { /* ignore */ }
+      if (cachedRepo) {
+        repoData = cachedRepo.repoData;
+        languages = cachedRepo.languages;
+      } else {
+        const { data } = await octokit.repos.get({ owner, repo });
+        repoData = data;
+
+        languages = [];
+        try {
+          const { data: langData } = await octokit.repos.listLanguages({ owner, repo });
+          languages = Object.keys(langData);
+        } catch { /* ignore */ }
+
+        setRepoCached(fullName, { repoData: { description: data.description, stargazers_count: data.stargazers_count, forks_count: data.forks_count, language: data.language, owner: { avatar_url: data.owner.avatar_url }, html_url: data.html_url }, languages });
+      }
 
       const prDetails = prs.map((pr: any) => ({
         title: pr.title,
@@ -205,7 +225,12 @@ export async function fetchContributions(
   onProgress?.('Done!', 100);
 
   // Sort by stars descending
-  return Array.from(contributionMap.values()).sort((a, b) => b.repo.stars - a.repo.stars);
+  const results = Array.from(contributionMap.values()).sort((a, b) => b.repo.stars - a.repo.stars);
+
+  // Cache results
+  setCached(results, 'contributions', username, dateRange);
+
+  return results;
 }
 
 export function computeHeroStats(contributions: Contribution[]): HeroStats {
