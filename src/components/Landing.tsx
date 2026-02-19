@@ -1,16 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getLoginUrl, isAuthenticated } from '../auth';
+import { getLoginUrl, isAuthenticated, getToken } from '../auth';
+import { fetchUserProfile } from '../github';
 import './Landing.css';
 
 export function Landing() {
   const [username, setUsername] = useState('');
+  const [loggedInUser, setLoggedInUser] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      fetchUserProfile(getToken()).then(p => setLoggedInUser(p.login)).catch(() => {});
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (username.trim()) navigate(`/${username.trim()}`);
   };
+
+  const examples = [
+    ...(loggedInUser ? [loggedInUser] : []),
+    'torvalds', 'sindresorhus', 'antfu', 'ljharb', 'gaearon', 'yyx990803', 'austenstone',
+  ];
 
   return (
     <div className="landing">
@@ -43,7 +56,14 @@ export function Landing() {
           <span>or</span>
         </div>
         {isAuthenticated() ? (
-          <p className="auth-status">✅ Signed in — enter any username above</p>
+          loggedInUser ? (
+            <button className="github-login-btn" onClick={() => navigate(`/${loggedInUser}`)}>
+              <img src={`https://github.com/${loggedInUser}.png?size=40`} alt="" style={{ width: 20, height: 20, borderRadius: '50%' }} />
+              View your contributions
+            </button>
+          ) : (
+            <p className="auth-status">✅ Signed in</p>
+          )
         ) : (
           <a href={getLoginUrl()} className="github-login-btn">
             <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
@@ -59,7 +79,7 @@ export function Landing() {
       <div className="landing-examples">
         <p>Try these:</p>
         <div className="example-links">
-          {['sindresorhus', 'tj', 'kentcdodds', 'antfu', 'austenstone'].map(u => (
+          {examples.map(u => (
             <a key={u} href={`/${u}`} onClick={(e) => { e.preventDefault(); navigate(`/${u}`); }}>
               @{u}
             </a>
